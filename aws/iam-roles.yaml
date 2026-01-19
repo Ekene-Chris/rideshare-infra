@@ -29,4 +29,4 @@ metadata:
     app.kubernetes.io/name: cluster-autoscaler
   annotations:
     # Replace with your actual IAM role ARN
-    eks.amazonaws.com/role-arn: arn:aws:iam::221693237976:role/teleios-test-autoscaler
+    eks.amazonaws.com/role-arn: arn:aws:iam::221693237976:role/rideshare-autoscaler
