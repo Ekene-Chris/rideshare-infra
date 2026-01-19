@@ -234,11 +234,11 @@ spec:
                   key: POSTGRES_REPLICATION_PASSWORD
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 100m
+              memory: 256Mi
             limits:
-              cpu: 2
-              memory: 2Gi
+              cpu: 500m
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -281,7 +281,7 @@ spec:
         storageClassName: ebs-gp3
         resources:
           requests:
-            storage: 50Gi
+            storage: 20Gi
 ---
 # Replica StatefulSet
 apiVersion: apps/v1
@@ -368,11 +368,11 @@ spec:
                   key: POSTGRES_REPLICATION_PASSWORD
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 100m
+              memory: 256Mi
             limits:
-              cpu: 2
-              memory: 2Gi
+              cpu: 500m
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -415,4 +415,4 @@ spec:
         storageClassName: ebs-gp3
         resources:
           requests:
-            storage: 50Gi
+            storage: 20Gi

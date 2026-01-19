@@ -34,7 +34,7 @@ spec:
             - --cloud-provider=aws
             - --skip-nodes-with-local-storage=false
             - --expander=least-waste
-            - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/-cluster-teleios-test
+            - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/teleios-test
             - --balance-similar-node-groups
             - --scale-down-enabled=true
             - --scale-down-delay-after-add=10m
