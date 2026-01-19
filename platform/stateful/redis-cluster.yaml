@@ -227,7 +227,7 @@ spec:
               echo "Waiting for Redis pods to be ready..."
               for i in $(seq 0 5); do
                 until redis-cli -h redis-cluster-$i.redis-cluster-headless.rideshare-data.svc.cluster.local ping; do
-                  echo "Waiting for redis-cluster-$i..."
+                  echo "Waiting for redis-cluster-$i."
                   sleep 5
                 done
               done

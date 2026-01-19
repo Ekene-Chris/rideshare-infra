@@ -84,32 +84,32 @@ jobs:
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
       - name: Deploy namespaces
-        if: steps.changes.outputs.namespaces == 'true'
+        # if: steps.changes.outputs.namespaces == 'true'
         run: kubectl apply -f namespaces.yaml
 
       - name: Deploy AWS resources
-        if: steps.changes.outputs.aws == 'true'
+        # if: steps.changes.outputs.aws == 'true'
         run: |
           kubectl apply -f aws/storage-classes.yaml
           kubectl apply -f aws/iam-roles.yaml
 
       - name: Deploy secrets
-        if: steps.changes.outputs.secrets == 'true'
+        # if: steps.changes.outputs.secrets == 'true'
         run: |
           kubectl apply -f platform/secrets/secret-store.yaml
           kubectl apply -f platform/secrets/external-secrets.yaml
 
       - name: Deploy scaling
-        if: steps.changes.outputs.scaling == 'true'
+        # if: steps.changes.outputs.scaling == 'true'
         run: |
           kubectl apply -f platform/scaling/pod-disruption-budgets.yaml
 
       - name: Deploy ingress
-        if: steps.changes.outputs.ingress == 'true'
+        # if: steps.changes.outputs.ingress == 'true'
         run: kubectl apply -f platform/ingress/ingress-rules.yaml
 
       - name: Deploy stateful workloads
-        if: steps.changes.outputs.stateful == 'true'
+        # if: steps.changes.outputs.stateful == 'true'
         run: |
           kubectl apply -f platform/stateful/postgres-primary-replica.yaml
           kubectl apply -f platform/stateful/redis-cluster.yaml

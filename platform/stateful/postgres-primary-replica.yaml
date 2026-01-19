@@ -159,6 +159,7 @@ spec:
   selector:
     app: postgres
     role: replica
+
 ---
 # Primary StatefulSet
 apiVersion: apps/v1
