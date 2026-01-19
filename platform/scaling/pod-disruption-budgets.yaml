@@ -1,0 +1,98 @@
+# Pod Disruption Budgets for rideshare platform services
+# Ensures high availability during voluntary disruptions (upgrades, scaling, etc.)
+
+# Redis cluster - maintain quorum
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-cluster-pdb
+  namespace: rideshare-data
+spec:
+  minAvailable: 4
+  selector:
+    matchLabels:
+      app: redis-cluster
+---
+# PostgreSQL - always keep primary available, allow one replica down
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: rideshare-data
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: postgres
+---
+# User service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service-pdb
+  namespace: rideshare-platform
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: user-service
+---
+# Ride service - critical for core functionality
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ride-service-pdb
+  namespace: rideshare-platform
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: ride-service
+---
+# Driver service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: driver-service-pdb
+  namespace: rideshare-platform
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: driver-service
+---
+# Location service - critical for real-time tracking
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: location-service-pdb
+  namespace: rideshare-platform
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: location-service
+---
+# Payment service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service-pdb
+  namespace: rideshare-platform
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment-service
+---
+# Notification service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notification-service-pdb
+  namespace: rideshare-platform
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: notification-service

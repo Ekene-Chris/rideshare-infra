@@ -1,0 +1,116 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "namespaces.yaml"
+      - "aws/**"
+      - "platform/**"
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Component to deploy"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - namespaces
+          - aws
+          - secrets
+          - scaling
+          - ingress
+          - stateful
+
+env:
+  AWS_REGION: us-east-2
+  EKS_CLUSTER_NAME: teleios-test
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            component="${{ github.event.inputs.component }}"
+            if [ "$component" = "all" ]; then
+              echo "namespaces=true" >> $GITHUB_OUTPUT
+              echo "aws=true" >> $GITHUB_OUTPUT
+              echo "secrets=true" >> $GITHUB_OUTPUT
+              echo "scaling=true" >> $GITHUB_OUTPUT
+              echo "ingress=true" >> $GITHUB_OUTPUT
+              echo "stateful=true" >> $GITHUB_OUTPUT
+            else
+              echo "$component=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Check what changed in the push
+            if git diff --name-only HEAD~1 HEAD | grep -q "^namespaces.yaml$"; then
+              echo "namespaces=true" >> $GITHUB_OUTPUT
+            fi
+            if git diff --name-only HEAD~1 HEAD | grep -q "^aws/"; then
+              echo "aws=true" >> $GITHUB_OUTPUT
+            fi
+            if git diff --name-only HEAD~1 HEAD | grep -q "^platform/secrets/"; then
+              echo "secrets=true" >> $GITHUB_OUTPUT
+            fi
+            if git diff --name-only HEAD~1 HEAD | grep -q "^platform/scaling/"; then
+              echo "scaling=true" >> $GITHUB_OUTPUT
+            fi
+            if git diff --name-only HEAD~1 HEAD | grep -q "^platform/ingress/"; then
+              echo "ingress=true" >> $GITHUB_OUTPUT
+            fi
+            if git diff --name-only HEAD~1 HEAD | grep -q "^platform/stateful/"; then
+              echo "stateful=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Deploy namespaces
+        if: steps.changes.outputs.namespaces == 'true'
+        run: kubectl apply -f namespaces.yaml
+
+      - name: Deploy AWS resources
+        if: steps.changes.outputs.aws == 'true'
+        run: |
+          kubectl apply -f aws/storage-classes.yaml
+          kubectl apply -f aws/iam-roles.yaml
+
+      - name: Deploy secrets
+        if: steps.changes.outputs.secrets == 'true'
+        run: |
+          kubectl apply -f platform/secrets/secret-store.yaml
+          kubectl apply -f platform/secrets/external-secrets.yaml
+
+      - name: Deploy scaling
+        if: steps.changes.outputs.scaling == 'true'
+        run: |
+          kubectl apply -f platform/scaling/cluster-autoscaler.yaml
+          kubectl apply -f platform/scaling/pod-disruption-budgets.yaml
+
+      - name: Deploy ingress
+        if: steps.changes.outputs.ingress == 'true'
+        run: kubectl apply -f platform/ingress/ingress-rules.yaml
+
+      - name: Deploy stateful workloads
+        if: steps.changes.outputs.stateful == 'true'
+        run: |
+          kubectl apply -f platform/stateful/postgres-primary-replica.yaml
+          kubectl apply -f platform/stateful/redis-cluster.yaml

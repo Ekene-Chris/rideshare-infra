@@ -1,0 +1,116 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rideshare-api-gateway
+  namespace: rideshare-platform
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.rideshare.example.com
+      secretName: rideshare-api-tls
+  rules:
+    - host: api.rideshare.example.com
+      http:
+        paths:
+          # User service - authentication, profiles
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 80
+          - path: /api/v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 80
+
+          # Ride service - ride requests, matching, status
+          - path: /api/v1/rides
+            pathType: Prefix
+            backend:
+              service:
+                name: ride-service
+                port:
+                  number: 80
+
+          # Driver service - driver management, availability
+          - path: /api/v1/drivers
+            pathType: Prefix
+            backend:
+              service:
+                name: driver-service
+                port:
+                  number: 80
+
+          # Location service - real-time tracking
+          - path: /api/v1/locations
+            pathType: Prefix
+            backend:
+              service:
+                name: location-service
+                port:
+                  number: 80
+
+          # Payment service - transactions, wallet
+          - path: /api/v1/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 80
+
+          # Notification service - push, SMS, email
+          - path: /api/v1/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 80
+---
+# WebSocket ingress for real-time features
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rideshare-websocket
+  namespace: rideshare-platform
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ws.rideshare.example.com
+      secretName: rideshare-ws-tls
+  rules:
+    - host: ws.rideshare.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: location-service
+                port:
+                  number: 8080

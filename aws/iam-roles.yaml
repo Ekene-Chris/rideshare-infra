@@ -1,0 +1,32 @@
+# IAM Roles for Service Accounts (IRSA) Reference
+# These are created via Terraform/eksctl, documented here for reference
+#
+# Required IAM policies for the rideshare platform:
+#
+# 1. External Secrets Operator
+#    Service Account: external-secrets (in external-secrets namespace)
+#    Policy: SecretsManagerReadWrite for rideshare/* secrets
+#
+# 2. Cluster Autoscaler
+#    Service Account: cluster-autoscaler (in kube-system)
+#    Policy: AutoScaling full access for the cluster's ASGs
+#
+# 3. EBS CSI Driver
+#    Service Account: ebs-csi-controller-sa (in kube-system)
+#    Policy: EC2 volume management
+#
+# Example IRSA annotation for service accounts:
+# eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
+
+---
+# Service Account for Cluster Autoscaler (references IAM role created externally)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: cluster-autoscaler
+  annotations:
+    # Replace with your actual IAM role ARN
+    eks.amazonaws.com/role-arn: arn:aws:iam::221693237976:role/teleios-test-autoscaler

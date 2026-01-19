@@ -1,0 +1,52 @@
+# EKS Managed Node Groups Reference
+# These are created via Terraform/eksctl, documented here for reference
+#
+# Node Group Configuration for Rideshare Platform:
+#
+# 1. rideshare-general
+#    - Instance Types: m5.large, m5a.large
+#    - Min: 2, Max: 10, Desired: 3
+#    - Labels: workload-type=general
+#    - Purpose: Stateless microservices, ingress controllers
+#
+# 2. rideshare-data
+#    - Instance Types: r5.large, r5a.large (memory-optimized)
+#    - Min: 3, Max: 6, Desired: 3
+#    - Labels: workload-type=data
+#    - Taints: workload-type=data:NoSchedule
+#    - Purpose: Redis, PostgreSQL
+#
+# eksctl example:
+# ---
+# apiVersion: eksctl.io/v1alpha5
+# kind: ClusterConfig
+# metadata:
+#   name: rideshare-cluster
+#   region: us-east-2
+#
+# managedNodeGroups:
+#   - name: rideshare-general
+#     instanceType: m5.large
+#     minSize: 2
+#     maxSize: 10
+#     desiredCapacity: 3
+#     labels:
+#       workload-type: general
+#     tags:
+#       k8s.io/cluster-autoscaler/enabled: "true"
+#       k8s.io/cluster-autoscaler/rideshare-cluster: "owned"
+#
+#   - name: rideshare-data
+#     instanceType: r5.large
+#     minSize: 3
+#     maxSize: 6
+#     desiredCapacity: 3
+#     labels:
+#       workload-type: data
+#     taints:
+#       - key: workload-type
+#         value: data
+#         effect: NoSchedule
+#     tags:
+#       k8s.io/cluster-autoscaler/enabled: "true"
+#       k8s.io/cluster-autoscaler/rideshare-cluster: "owned"
