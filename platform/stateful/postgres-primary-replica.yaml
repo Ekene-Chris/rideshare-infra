@@ -186,20 +186,6 @@ spec:
         fsGroup: 999
         runAsUser: 999
         runAsNonRoot: true
-      tolerations:
-        - key: workload-type
-          operator: Equal
-          value: data
-          effect: NoSchedule
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: workload-type
-                    operator: In
-                    values:
-                      - data
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -309,31 +295,6 @@ spec:
         fsGroup: 999
         runAsUser: 999
         runAsNonRoot: true
-      tolerations:
-        - key: workload-type
-          operator: Equal
-          value: data
-          effect: NoSchedule
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: workload-type
-                    operator: In
-                    values:
-                      - data
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - postgres
-                topologyKey: topology.kubernetes.io/zone
       containers:
         - name: postgres
           image: postgres:16-alpine
