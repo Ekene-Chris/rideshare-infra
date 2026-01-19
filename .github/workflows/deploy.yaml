@@ -102,7 +102,6 @@ jobs:
       - name: Deploy scaling
         if: steps.changes.outputs.scaling == 'true'
         run: |
-          kubectl apply -f platform/scaling/cluster-autoscaler.yaml
           kubectl apply -f platform/scaling/pod-disruption-budgets.yaml
 
       - name: Deploy ingress
