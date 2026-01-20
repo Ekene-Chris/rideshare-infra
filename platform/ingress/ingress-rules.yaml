@@ -4,12 +4,10 @@ metadata:
   name: rideshare-api-gateway
   namespace: rideshare
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
-    nginx.ingress.kubernetes.io/rate-limit: "100"
-    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.org/ssl-redirect: "true"
+    nginx.org/client-max-body-size: "10m"
+    nginx.org/proxy-read-timeout: "60s"
+    nginx.org/proxy-send-timeout: "60s"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
@@ -26,7 +24,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: ride-service
+                name: rider-service
                 port:
                   number: 80
 

@@ -1,248 +1,99 @@
-# Redis Cluster - 6 nodes (3 masters, 3 replicas)
-# Provides session storage, caching, and real-time data
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: redis-cluster-config
+  name: redis-config
   namespace: rideshare-data
 data:
   redis.conf: |
-    cluster-enabled yes
-    cluster-require-full-coverage no
-    cluster-node-timeout 15000
-    cluster-config-file /data/nodes.conf
-    cluster-migration-barrier 1
-    appendonly yes
-    appendfsync everysec
-    protected-mode no
-    bind 0.0.0.0
+    # Standalone mode (Cluster disabled)
     port 6379
-    tcp-backlog 511
-    timeout 0
-    tcp-keepalive 300
-    maxmemory 1gb
+    bind 0.0.0.0
+    appendonly yes
+    protected-mode no
+    # Maximize memory efficiency
+    maxmemory 512mb
     maxmemory-policy allkeys-lru
 
-  cluster-init.sh: |
-    #!/bin/bash
-    set -e
-
-    # Wait for all nodes to be ready
-    sleep 10
-
-    REDIS_NODES=""
-    for i in $(seq 0 5); do
-      REDIS_NODES="$REDIS_NODES redis-cluster-$i.redis-cluster-headless.rideshare-data.svc.cluster.local:6379"
-    done
-
-    # Check if cluster is already initialized
-    if redis-cli -h redis-cluster-0.redis-cluster-headless.rideshare-data.svc.cluster.local cluster info | grep -q "cluster_state:ok"; then
-      echo "Cluster already initialized"
-      exit 0
-    fi
-
-    # Create cluster
-    echo "yes" | redis-cli --cluster create $REDIS_NODES --cluster-replicas 1
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis-cluster-headless
+  name: redis-standalone
   namespace: rideshare-data
-  labels:
-    app: redis-cluster
-spec:
-  clusterIP: None
-  ports:
-    - port: 6379
-      targetPort: 6379
-      name: client
-    - port: 16379
-      targetPort: 16379
-      name: gossip
-  selector:
-    app: redis-cluster
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-cluster
-  namespace: rideshare-data
-  labels:
-    app: redis-cluster
 spec:
   type: ClusterIP
   ports:
     - port: 6379
       targetPort: 6379
-      name: client
+      name: redis
   selector:
-    app: redis-cluster
+    app: redis-standalone
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: redis-cluster
+  name: redis-standalone
   namespace: rideshare-data
-  labels:
-    app: redis-cluster
 spec:
-  serviceName: redis-cluster-headless
-  replicas: 6
+  serviceName: redis-standalone
+  replicas: 1 # <--- JUST ONE NODE
   selector:
     matchLabels:
-      app: redis-cluster
+      app: redis-standalone
   template:
     metadata:
       labels:
-        app: redis-cluster
+        app: redis-standalone
     spec:
       securityContext:
-        fsGroup: 1000
-        runAsUser: 1000
+        fsGroup: 999
+        runAsUser: 999
         runAsNonRoot: true
-      tolerations:
-        - key: workload-type
-          operator: Equal
-          value: data
-          effect: NoSchedule
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: workload-type
-                    operator: In
-                    values:
-                      - data
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - redis-cluster
-                topologyKey: topology.kubernetes.io/zone
-            - weight: 50
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - redis-cluster
-                topologyKey: kubernetes.io/hostname
       containers:
         - name: redis
-          image: redis:7.2-alpine
-          command:
-            - redis-server
+          image: redis:7.2
+          command: ["redis-server"]
           args:
-            - /etc/redis/redis.conf
+            - "/etc/redis/redis.conf"
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
           ports:
             - containerPort: 6379
-              name: client
-            - containerPort: 16379
-              name: gossip
+              name: redis
           env:
-            - name: POD_IP
+            - name: REDIS_PASSWORD
               valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDIS_PASSWORD
           resources:
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 256Mi
             limits:
               cpu: 500m
-              memory: 512Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
+              memory: 1Gi
           volumeMounts:
             - name: data
               mountPath: /data
             - name: config
               mountPath: /etc/redis
-            - name: tmp
-              mountPath: /tmp
           readinessProbe:
             exec:
-              command:
-                - redis-cli
-                - ping
+              command: ["sh", "-c", "redis-cli -a $REDIS_PASSWORD ping"]
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 5
-          livenessProbe:
-            exec:
-              command:
-                - redis-cli
-                - ping
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
       volumes:
         - name: config
           configMap:
-            name: redis-cluster-config
-        - name: tmp
-          emptyDir: {}
+            name: redis-config
   volumeClaimTemplates:
     - metadata:
         name: data
       spec:
-        accessModes:
-          - ReadWriteOnce
+        accessModes: [ReadWriteOnce]
         storageClassName: ebs-gp3
         resources:
           requests:
             storage: 10Gi
----
-# Job to initialize the cluster after all pods are ready
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: redis-cluster-init
-  namespace: rideshare-data
-spec:
-  ttlSecondsAfterFinished: 300
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: redis-cluster-init
-          image: redis:7.2-alpine
-          command:
-            - /bin/sh
-            - -c
-            - |
-              set -e
-              echo "Waiting for Redis pods to be ready..."
-              for i in $(seq 0 5); do
-                until redis-cli -h redis-cluster-$i.redis-cluster-headless.rideshare-data.svc.cluster.local ping; do
-                  echo "Waiting for redis-cluster-$i."
-                  sleep 5
-                done
-              done
-
-              echo "All Redis pods are ready. Checking cluster status..."
-              if redis-cli -h redis-cluster-0.redis-cluster-headless.rideshare-data.svc.cluster.local cluster info | grep -q "cluster_state:ok"; then
-                echo "Cluster already initialized"
-                exit 0
-              fi
-
-              echo "Initializing Redis cluster..."
-              NODES=""
-              for i in $(seq 0 5); do
-                NODES="$NODES redis-cluster-$i.redis-cluster-headless.rideshare-data.svc.cluster.local:6379"
-              done
-
-              echo "yes" | redis-cli --cluster create $NODES --cluster-replicas 1
-              echo "Redis cluster initialized successfully"
