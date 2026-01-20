@@ -4,11 +4,12 @@ metadata:
   name: rideshare-api-gateway
   namespace: rideshare
   annotations:
-    nginx.org/ssl-redirect: "true"
+    nginx.org/ssl-redirect: "false"
     nginx.org/client-max-body-size: "10m"
     nginx.org/proxy-read-timeout: "60s"
     nginx.org/proxy-send-timeout: "60s"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    acme.cert-manager.io/http01-edit-in-place: "true"
 spec:
   ingressClassName: nginx
   tls:
