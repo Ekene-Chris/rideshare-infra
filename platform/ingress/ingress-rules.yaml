@@ -13,10 +13,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - rideshare-api.ekenechris.com
+        - rideshare.teleioslabs.net
       secretName: rideshare-api-tls
   rules:
-    - host: rideshare-api.ekenechris.com
+    - host: rideshare.teleioslabs.net
       http:
         paths:
           # User service - authentication, profiles
